@@ -1,16 +1,109 @@
-# PM Bot API - Project Management AI Agent Backend
+## PM Bot API
 
-A comprehensive project management AI agent backend system built with Flask that integrates with multiple project management tools (Azure DevOps, JIRA, GitHub) and provides intelligent analysis, task management, sprint planning, and reporting capabilities.
+A sophisticated project management bot API that integrates with JIRA, Azure DevOps, and GitHub to provide intelligent project analysis and automation through AI agents.
+
+### Key Features
+
+- **Real-time Integration**: Direct API connections to JIRA, GitHub, and Azure DevOps
+- **AI Agent System**: Specialized agents for different PM tasks (analysis, backlog generation, sprint planning)
+- **Multi-tenant Architecture**: Support for multiple organizations
+- **JWT Authentication**: Secure user authentication and authorization
+- **LLM Integration**: Support for OpenAI GPT and Anthropic Claude models
+- **Real Data Only**: No mock data or simulated responses - all functionality uses real API integrations
+
+### Architecture
+
+- **Flask-based API**: RESTful endpoints for all operations
+- **SQLAlchemy ORM**: Database management with MySQL support
+- **MCP (Model Context Protocol)**: Standardized integration layer for external tools
+- **Agent Registry**: Intelligent routing system for AI agents
+- **Real-time Data**: All project data comes from actual tool integrations
+
+### Prerequisites
+
+- Python 3.8+
+- MySQL 8.0+
+- Valid API tokens for:
+  - JIRA (Atlassian API token)
+  - GitHub (Personal Access Token)
+  - Azure DevOps (Personal Access Token) - optional
+- OpenAI API key or Anthropic API key
+
+### Quick Start
+
+1. **Clone and setup**
+   ```bash
+   git clone <repository-url>
+   cd pm-bot-api
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your actual API keys and database credentials
+   ```
+
+3. **Initialize database**
+   ```bash
+   python init_db.py
+   ```
+
+4. **Run the application**
+   ```bash
+   python app.py
+   ```
+
+### Required Environment Variables
+
+```env
+# Database
+DATABASE_URL=mysql+pymysql://user:password@localhost:3306/pmbot
+
+# Security
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-here
+
+# LLM Provider (choose one)
+OPENAI_API_KEY=sk-your-openai-key
+# OR
+ANTHROPIC_API_KEY=your-anthropic-key
+
+# JIRA Integration (Required)
+JIRA_SERVER_URL=https://yourcompany.atlassian.net
+JIRA_EMAIL=your-email@company.com
+JIRA_API_TOKEN=your-jira-api-token
+JIRA_PROJECT_KEY=YOUR_PROJECT_KEY
+
+# GitHub Integration (Required)
+GITHUB_TOKEN=ghp_your-github-token
+GITHUB_REPO_OWNER=your-github-username
+GITHUB_REPO_NAME=your-repo-name
+GITHUB_BASE_URL=https://api.github.com
+
+# Azure DevOps Integration (Optional)
+AZURE_DEVOPS_ORG=your-organization
+AZURE_DEVOPS_TOKEN=your-pat-token
+AZURE_DEVOPS_PROJECT=your-project-name
+```
 
 ## Features
 
-### 🤖 Multi-Agent AI System
-- **Project Analysis Agent**: Analyzes project health, progress, and metrics
-- **Task Management Agent**: Creates, updates, and tracks work items
-- **Sprint Planning Agent**: Manages sprints and iterations
-- **Performance Analysis Agent**: Tracks team productivity and velocity
-- **Risk Assessment Agent**: Identifies and mitigates project risks
-- **Report Generation Agent**: Creates automated status reports
+### 🤖 Intelligent Agent Architecture
+The system uses a streamlined 3-agent architecture for optimal performance and maintainability:
+
+- **Main Agent**: Intelligent request router that analyzes user intent using LLM and delegates to specialized agents
+- **Analysis Agent**: Handles all analysis, reporting, metrics, and insights (project health, team performance, progress tracking, risk assessment)
+- **Management Agent**: Handles all CRUD operations for work items, sprints, backlogs, and project resources (creating, updating, assigning, planning)
+
+#### Agent Routing Flow:
+1. User sends message to `/api/v1/messages` endpoint
+2. MainAgent analyzes intent using LLM-powered classification
+3. Routes to AnalysisAgent for reporting/metrics or ManagementAgent for creating/updating items
+4. Specialized agent executes the task and returns results
+5. Response includes routing information for transparency
 
 ### 🔌 Multi-LLM Support
 - OpenAI GPT models
@@ -41,63 +134,6 @@ A comprehensive project management AI agent backend system built with Flask that
 - Cost analysis per user/project
 - Performance metrics
 - Execution history
-
-## Quick Start
-
-### Prerequisites
-- Python 3.11+
-- MySQL 8.0+
-- Node.js 18+ (for frontend, if applicable)
-
-### Local Development Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd pm-bot-api
-   ```
-
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Configure environment**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
-
-4. **Set up the database**
-   ```bash
-   # Create MySQL database
-   mysql -u root -p -e "CREATE DATABASE pmbot_dev;"
-   
-   # Initialize the database
-   flask init-db
-   
-   # Create sample data (optional)
-   flask create-sample-data
-   ```
-
-5. **Run the application**
-   ```bash
-   python app.py
-   ```
-
-The API will be available at `http://localhost:5000`
-
-### Docker Development Setup
-
-1. **Using Docker Compose**
-   ```bash
-   # Start all services (API, MySQL, Nginx)
-   docker-compose up -d
-   
-   # Initialize database
-   docker-compose exec pmbot-api flask init-db
-   docker-compose exec pmbot-api flask create-sample-data
-   ```
 
 ## API Documentation
 

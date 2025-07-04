@@ -32,9 +32,18 @@ class Config:
     
     # Third-party integrations
     AZURE_DEVOPS_PAT = os.environ.get('AZURE_DEVOPS_PAT')
+    
+    # JIRA Configuration
     JIRA_API_TOKEN = os.environ.get('JIRA_API_TOKEN')
     JIRA_SERVER_URL = os.environ.get('JIRA_SERVER_URL')
+    JIRA_EMAIL = os.environ.get('JIRA_EMAIL')
+    JIRA_PROJECT_KEY = os.environ.get('JIRA_PROJECT_KEY')
+    
+    # GitHub Configuration
     GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
+    GITHUB_REPO_NAME = os.environ.get('GITHUB_REPO_NAME')
+    GITHUB_REPO_OWNER = os.environ.get('GITHUB_REPO_OWNER')
+    GITHUB_BASE_URL = os.environ.get('GITHUB_BASE_URL', 'https://api.github.com')
     
     # Slack and Teams
     SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
