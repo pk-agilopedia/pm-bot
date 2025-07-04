@@ -10,6 +10,7 @@ from app.mcp import mcp_registry, MCPResponse
 from app.models import AgentExecution, RequestStatus
 from app import db
 from app.mcp import JiraProvider, AzureDevOpsProvider, GitHubProvider
+import re
 
 @dataclass
 class AgentContext:
@@ -91,7 +92,7 @@ class BaseAgent(ABC):
                 if tool.tool_type.value == 'jira':
                     provider = JiraProvider(
                         server_url=tool.base_url,
-                        username='mock_user',
+                        username=tool.configuration.get('email'),
                         api_token=tool.api_token,
                         config=tool.configuration
                     )
@@ -103,7 +104,6 @@ class BaseAgent(ABC):
                     )
                 elif tool.tool_type.value == 'github':
                     provider = GitHubProvider(
-                        base_url=tool.base_url,
                         auth_token=tool.api_token,
                         config=tool.configuration
                     )
@@ -115,6 +115,9 @@ class BaseAgent(ABC):
                 tool_data = {
                     'type': tool.tool_type.value,
                     'name': tool.name,
+                    'base_url': tool.base_url,
+                    'api_token': tool.api_token,
+                    'configuration': tool.configuration,
                     'data': {}
                 }
                 
@@ -304,25 +307,8 @@ class AgentRegistry:
         return list(self._agents.keys())
     
     def get_agent_for_query(self, query: str, context: AgentContext) -> Optional[BaseAgent]:
-        """Determine which agent should handle the query"""
-        query_lower = query.lower()
-        
-        # Simple keyword-based routing (can be enhanced with ML)
-        if any(keyword in query_lower for keyword in ['analyze', 'analysis', 'health', 'metrics', 'progress']):
-            return self.get_agent('project_analysis')
-        elif any(keyword in query_lower for keyword in ['sprint', 'iteration', 'plan', 'planning']):
-            return self.get_agent('sprint_planning')
-        elif any(keyword in query_lower for keyword in ['task', 'work item', 'issue', 'ticket', 'create', 'update']):
-            return self.get_agent('task_management')
-        elif any(keyword in query_lower for keyword in ['performance', 'velocity', 'productivity', 'team']):
-            return self.get_agent('performance_analysis')
-        elif any(keyword in query_lower for keyword in ['risk', 'risks', 'issues', 'blockers', 'impediments']):
-            return self.get_agent('risk_assessment')
-        elif any(keyword in query_lower for keyword in ['report', 'status', 'summary', 'dashboard']):
-            return self.get_agent('report_generation')
-        else:
-            # Default to project analysis for general queries
-            return self.get_agent('project_analysis')
+        """Get the main agent which will handle intelligent routing to specialized agents"""
+        return self.get_agent('main')
 
 # Global agent registry
 agent_registry = AgentRegistry() 

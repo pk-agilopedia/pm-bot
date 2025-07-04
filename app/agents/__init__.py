@@ -1,6 +1,8 @@
 from .base import BaseAgent, AgentContext, AgentResponse, AgentRegistry, agent_registry
-from .project_analysis import ProjectAnalysisAgent
-from .task_management import TaskManagementAgent
+from .main import MainAgent
+from .analysis import AnalysisAgent
+from .management import ManagementAgent
+from .intelligence import agent_intelligence, AgentDecision, QueryAnalysis
 
 __all__ = [
     'BaseAgent',
@@ -8,6 +10,10 @@ __all__ = [
     'AgentResponse',
     'AgentRegistry',
     'agent_registry',
-    'ProjectAnalysisAgent',
-    'TaskManagementAgent'
+    'MainAgent',
+    'AnalysisAgent',
+    'ManagementAgent',
+    'agent_intelligence',
+    'AgentDecision',
+    'QueryAnalysis'
 ] 

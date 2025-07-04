@@ -16,6 +16,9 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Log the JIRA_SERVER_URL to verify it's loaded correctly
+    app.logger.info(f"JIRA_SERVER_URL: {app.config.get('JIRA_SERVER_URL')}")
+
     # Initialize Flask extensions
     db.init_app(app)
     migrate.init_app(app, db)
@@ -44,6 +47,18 @@ def create_app(config_class=Config):
         app.logger.setLevel(logging.INFO)
         app.logger.info('PM Bot startup')
 
+    # Register AI Agents
+    with app.app_context():
+        _register_agents()
+
     return app
+
+def _register_agents():
+    """Register all AI agents with the agent registry"""
+    from app.agents.base import agent_registry
+    from app.agents.main import MainAgent
+    
+    # Register only the main agent - it handles routing to specialized agents
+    agent_registry.register_agent(MainAgent())
 
 from app import models 

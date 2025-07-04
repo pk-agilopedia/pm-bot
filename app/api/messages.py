@@ -3,18 +3,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.api import bp
 from app.models import User, Project, ChatSession, ChatMessage, db
 from app.agents.base import AgentContext, agent_registry
-from app.agents.project_analysis import ProjectAnalysisAgent
-from app.agents.task_management import TaskManagementAgent
 import uuid
 from datetime import datetime
 import time
-
-# Register agents
-project_analysis_agent = ProjectAnalysisAgent()
-task_management_agent = TaskManagementAgent()
-
-agent_registry.register_agent(project_analysis_agent)
-agent_registry.register_agent(task_management_agent)
 
 @bp.route('/messages', methods=['POST'])
 @jwt_required()

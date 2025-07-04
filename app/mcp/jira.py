@@ -5,6 +5,12 @@ from typing import Dict, Any, List, Optional
 from .base import BaseMCPProvider, MCPResponse, WorkItem, Sprint
 import json
 
+try:
+    from flask import current_app
+except ImportError:
+    # Fallback for when Flask context is not available
+    current_app = None
+
 class JiraProvider(BaseMCPProvider):
     """JIRA MCP Provider"""
     
@@ -21,229 +27,7 @@ class JiraProvider(BaseMCPProvider):
             'Content-Type': 'application/json',
             'Accept': 'application/json'
         }
-        
-        # Check if this is a mock instance
-        self.is_mock = config.get('is_mock', False) if config else False
     
-    def _get_mock_work_items(self, project_id: str) -> List[WorkItem]:
-        """Generate mock work items for testing"""
-        today = datetime.utcnow()
-        
-        mock_items = [
-            # Sprint 1 items (completed)
-            WorkItem(
-                id="SAMPLE-1",
-                title="Setup project repository",
-                description="Initialize git repository and project structure",
-                status="Done",
-                assignee="John Doe",
-                labels=["infrastructure", "setup"],
-                created_date=today - timedelta(days=20),
-                updated_date=today - timedelta(days=8),
-                priority="High",
-                story_points=3,
-                metadata={
-                    'issue_type': 'Story',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-1"
-                }
-            ),
-            WorkItem(
-                id="SAMPLE-2",
-                title="Configure development environment",
-                description="Setup Docker, dependencies, and development tools",
-                status="Done",
-                assignee="Jane Smith",
-                labels=["infrastructure", "docker"],
-                created_date=today - timedelta(days=19),
-                updated_date=today - timedelta(days=8),
-                priority="High",
-                story_points=5,
-                metadata={
-                    'issue_type': 'Story',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-2"
-                }
-            ),
-            WorkItem(
-                id="SAMPLE-3",
-                title="Create basic API structure",
-                description="Setup Flask app with basic routes and authentication",
-                status="Done",
-                assignee="Mike Johnson",
-                labels=["backend", "api"],
-                created_date=today - timedelta(days=18),
-                updated_date=today - timedelta(days=9),
-                priority="Medium",
-                story_points=8,
-                metadata={
-                    'issue_type': 'Story',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-3"
-                }
-            ),
-            
-            # Sprint 2 items (current)
-            WorkItem(
-                id="SAMPLE-4",
-                title="Implement user management",
-                description="Create user registration, login, and profile management",
-                status="In Progress",
-                assignee="John Doe",
-                labels=["backend", "authentication"],
-                created_date=today - timedelta(days=10),
-                updated_date=today - timedelta(days=1),
-                priority="High",
-                story_points=13,
-                metadata={
-                    'issue_type': 'Story',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-4"
-                }
-            ),
-            WorkItem(
-                id="SAMPLE-5",
-                title="Add project management features",
-                description="Create project CRUD operations and team management",
-                status="In Progress",
-                assignee="Sarah Wilson",
-                labels=["backend", "project-management"],
-                created_date=today - timedelta(days=9),
-                updated_date=today,
-                priority="Medium",
-                story_points=8,
-                metadata={
-                    'issue_type': 'Story',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-5"
-                }
-            ),
-            WorkItem(
-                id="SAMPLE-6",
-                title="Fix authentication bug",
-                description="Token expiration not working correctly",
-                status="To Do",
-                assignee="Mike Johnson",
-                labels=["bug", "authentication"],
-                created_date=today - timedelta(days=3),
-                updated_date=today - timedelta(days=3),
-                priority="High",
-                story_points=2,
-                metadata={
-                    'issue_type': 'Bug',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-6"
-                }
-            ),
-            WorkItem(
-                id="SAMPLE-7",
-                title="Write API documentation",
-                description="Document all API endpoints with examples",
-                status="To Do",
-                assignee="Jane Smith",
-                labels=["documentation"],
-                created_date=today - timedelta(days=2),
-                updated_date=today - timedelta(days=2),
-                priority="Low",
-                story_points=5,
-                metadata={
-                    'issue_type': 'Task',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-7"
-                }
-            ),
-            
-            # Sprint 3 items (planned)
-            WorkItem(
-                id="SAMPLE-8",
-                title="Create analytics dashboard",
-                description="Build reporting interface for project metrics",
-                status="To Do",
-                assignee=None,
-                labels=["frontend", "analytics"],
-                created_date=today - timedelta(days=1),
-                updated_date=today - timedelta(days=1),
-                priority="Medium",
-                story_points=13,
-                metadata={
-                    'issue_type': 'Story',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-8"
-                }
-            ),
-            WorkItem(
-                id="SAMPLE-9",
-                title="Add email notifications",
-                description="Send notifications for important events",
-                status="To Do",
-                assignee=None,
-                labels=["backend", "notifications"],
-                created_date=today,
-                updated_date=today,
-                priority="Low",
-                story_points=8,
-                metadata={
-                    'issue_type': 'Story',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-9"
-                }
-            ),
-            
-            # Backlog items
-            WorkItem(
-                id="SAMPLE-10",
-                title="Implement mobile app",
-                description="Create mobile application for iOS and Android",
-                status="Backlog",
-                assignee=None,
-                labels=["mobile", "epic"],
-                created_date=today,
-                updated_date=today,
-                priority="Low",
-                story_points=21,
-                metadata={
-                    'issue_type': 'Epic',
-                    'project_key': project_id,
-                    'url': f"{self.base_url}/browse/SAMPLE-10"
-                }
-            )
-        ]
-        
-        return mock_items
-    
-    def _get_mock_sprints(self, project_id: str) -> List[Sprint]:
-        """Generate mock sprints for testing"""
-        today = datetime.utcnow()
-        
-        mock_sprints = [
-            Sprint(
-                id="1",
-                name="Sprint 1",
-                state="closed",
-                start_date=today - timedelta(days=21),
-                end_date=today - timedelta(days=7),
-                goal="Setup project foundation and basic features"
-            ),
-            Sprint(
-                id="2",
-                name="Sprint 2",
-                state="active",
-                start_date=today - timedelta(days=7),
-                end_date=today + timedelta(days=7),
-                goal="Implement core functionality and user management"
-            ),
-            Sprint(
-                id="3",
-                name="Sprint 3",
-                state="future",
-                start_date=today + timedelta(days=7),
-                end_date=today + timedelta(days=21),
-                goal="Add reporting and analytics features"
-            )
-        ]
-        
-        return mock_sprints
-
     def _make_request(self, method: str, endpoint: str, **kwargs) -> requests.Response:
         """Make authenticated request to JIRA API"""
         url = f"{self.base_url}/rest/api/3/{endpoint}"
@@ -254,12 +38,6 @@ class JiraProvider(BaseMCPProvider):
     
     def test_connection(self) -> MCPResponse:
         """Test connection to JIRA"""
-        if self.is_mock:
-            return MCPResponse(success=True, data={
-                "message": "Mock connection successful",
-                "user": "Mock User"
-            })
-            
         try:
             response = self._make_request('GET', 'myself')
             if response.status_code == 200:
@@ -275,17 +53,6 @@ class JiraProvider(BaseMCPProvider):
     
     def get_projects(self) -> MCPResponse:
         """Get list of JIRA projects"""
-        if self.is_mock:
-            return MCPResponse(success=True, data=[{
-                'id': '1',
-                'key': 'SAMPLE',
-                'name': 'Sample Project',
-                'description': 'A sample project for testing PM Bot',
-                'lead': 'Project Manager',
-                'projectTypeKey': 'software',
-                'url': f"{self.base_url}/projects/SAMPLE"
-            }])
-            
         try:
             response = self._make_request('GET', 'project')
             
@@ -313,9 +80,6 @@ class JiraProvider(BaseMCPProvider):
     
     def get_work_items(self, project_id: str, **filters) -> MCPResponse:
         """Get issues from JIRA project"""
-        if self.is_mock:
-            return MCPResponse(success=True, data=self._get_mock_work_items(project_id))
-            
         try:
             # Build JQL query based on filters
             jql_parts = [f'project = "{project_id}"']
@@ -381,6 +145,7 @@ class JiraProvider(BaseMCPProvider):
             # Default issue type if not specified
             issue_type = work_item.metadata.get('issue_type', 'Story') if work_item.metadata else 'Story'
             
+            # Basic required fields
             issue_data = {
                 "fields": {
                     "project": {"key": project_id},
@@ -404,17 +169,31 @@ class JiraProvider(BaseMCPProvider):
                 }
             }
             
+            # Optional fields - only add if they exist and are supported
+            # Skip priority field as it's not available in this JIRA configuration
+            # if work_item.priority:
+            #     issue_data["fields"]["priority"] = {"name": work_item.priority}
+            
+            # Add assignee if specified (but handle potential errors)
             if work_item.assignee:
-                issue_data["fields"]["assignee"] = {"displayName": work_item.assignee}
+                try:
+                    issue_data["fields"]["assignee"] = {"displayName": work_item.assignee}
+                except:
+                    pass  # Skip if assignee field is not available
             
-            if work_item.priority:
-                issue_data["fields"]["priority"] = {"name": work_item.priority}
-            
+            # Add labels if specified
             if work_item.labels:
-                issue_data["fields"]["labels"] = [{"name": label} for label in work_item.labels]
+                try:
+                    issue_data["fields"]["labels"] = work_item.labels  # JIRA expects array of strings
+                except:
+                    pass  # Skip if labels field is not available
             
+            # Add story points if specified (common custom field ID)
             if work_item.story_points:
-                issue_data["fields"]["customfield_10016"] = work_item.story_points
+                try:
+                    issue_data["fields"]["customfield_10016"] = work_item.story_points
+                except:
+                    pass  # Skip if story points field is not available
             
             response = self._make_request('POST', 'issue', json=issue_data)
             
@@ -431,6 +210,35 @@ class JiraProvider(BaseMCPProvider):
         except Exception as e:
             return MCPResponse(success=False, error=str(e))
     
+    def _find_user_by_name(self, display_name: str) -> str:
+        """Find user account ID by display name or email"""
+        try:
+            # Try to search for user by display name
+            response = self._make_request('GET', 'user/search', params={'query': display_name})
+            
+            if response.status_code == 200:
+                users = response.json()
+                if users:
+                    # Return the first matching user's accountId
+                    return users[0].get('accountId')
+            
+            # If no match found by display name, try email format
+            if '@' not in display_name:
+                # Try with email domain if it looks like it might be a name
+                email_query = f"{display_name.replace(' ', '.').lower()}@"
+                response = self._make_request('GET', 'user/search', params={'query': email_query})
+                
+                if response.status_code == 200:
+                    users = response.json()
+                    if users:
+                        return users[0].get('accountId')
+            
+        except Exception as e:
+            if current_app:
+                current_app.logger.error(f"Error finding user: {str(e)}")
+        
+        return None
+
     def update_work_item(self, project_id: str, work_item_id: str, updates: Dict[str, Any]) -> MCPResponse:
         """Update an existing issue"""
         try:
@@ -466,11 +274,21 @@ class JiraProvider(BaseMCPProvider):
                             ]
                         }
                     elif key == 'assignee':
-                        update_data["fields"][jira_field] = {"displayName": value}
+                        # Find the user's account ID for proper assignment
+                        account_id = self._find_user_by_name(value)
+                        if account_id:
+                            update_data["fields"][jira_field] = {"accountId": account_id}
+                        else:
+                            # Fallback: try with email if it looks like an email
+                            if '@' in value:
+                                update_data["fields"][jira_field] = {"emailAddress": value}
+                            else:
+                                # Last resort: try with display name (may not work in all JIRA setups)
+                                update_data["fields"][jira_field] = {"displayName": value}
                     elif key == 'priority':
                         update_data["fields"][jira_field] = {"name": value}
                     elif key == 'labels':
-                        update_data["fields"][jira_field] = [{"name": label} for label in value] if isinstance(value, list) else [{"name": value}]
+                        update_data["fields"][jira_field] = value
                     else:
                         update_data["fields"][jira_field] = value
             
@@ -496,6 +314,8 @@ class JiraProvider(BaseMCPProvider):
             
             # Update other fields
             if update_data["fields"]:
+                if current_app:
+                    current_app.logger.debug(f"Updating JIRA issue {work_item_id} with data: {update_data}")
                 response = self._make_request('PUT', f'issue/{work_item_id}', json=update_data)
                 
                 if response.status_code == 204:
@@ -504,7 +324,12 @@ class JiraProvider(BaseMCPProvider):
                         'url': f"{self.base_url}/browse/{work_item_id}"
                     })
                 else:
-                    return MCPResponse(success=False, error=f"Failed to update issue: {response.status_code}")
+                    error_msg = f"Failed to update issue: {response.status_code}"
+                    if response.text:
+                        error_msg += f" - {response.text}"
+                    if current_app:
+                        current_app.logger.error(f"JIRA update failed: {error_msg}")
+                    return MCPResponse(success=False, error=error_msg)
             
             return MCPResponse(success=True, data={
                 'key': work_item_id,
@@ -541,9 +366,6 @@ class JiraProvider(BaseMCPProvider):
     
     def get_sprints(self, project_id: str) -> MCPResponse:
         """Get sprints for a project"""
-        if self.is_mock:
-            return MCPResponse(success=True, data=self._get_mock_sprints(project_id))
-            
         try:
             # First get boards for the project
             boards_response = self._make_request('GET', f'../../rest/agile/1.0/board', 
@@ -622,5 +444,18 @@ class JiraProvider(BaseMCPProvider):
             else:
                 return MCPResponse(success=False, error=f"Failed to create sprint: {response.status_code}")
         
+        except Exception as e:
+            return MCPResponse(success=False, error=str(e))
+    
+    def delete_work_item(self, work_item_id: str) -> MCPResponse:
+        """Delete an issue in JIRA"""
+        try:
+            response = self._make_request('DELETE', f'issue/{work_item_id}')
+            if response.status_code == 204:
+                return MCPResponse(success=True, data={
+                    'message': f'Work item {work_item_id} deleted successfully'
+                })
+            else:
+                return MCPResponse(success=False, error=f"Failed to delete issue: {response.status_code}")
         except Exception as e:
             return MCPResponse(success=False, error=str(e)) 
