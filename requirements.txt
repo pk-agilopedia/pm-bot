@@ -32,4 +32,4 @@ black==23.9.1
 flake8==6.1.0
 
 # Security
-bcrypt==4.0.1 
+bcrypt==4.0.1
