@@ -51,4 +51,4 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'pm-bot-app'
-          package: .
+          package: ./pm-bot-api
