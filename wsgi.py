@@ -1,8 +1,11 @@
 import os
-from app import create_app
-from config import config
+import sys
 
-env = os.environ.get('ENVIRONMENT', 'development')
-config_class = config.get(env, config['default'])
+# Add the current directory to Python path
+sys.path.insert(0, os.path.dirname(__file__))
 
-app = create_app(config_class)
+# Import the app instance directly from app.py
+from app import app
+
+if __name__ == "__main__":
+    app.run()
