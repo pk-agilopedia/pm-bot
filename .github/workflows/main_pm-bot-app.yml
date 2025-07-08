@@ -46,4 +46,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'pm-bot-app'
-          package: ./pm-bot-api
+          package: pm-bot-api
