@@ -75,5 +75,5 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'pm-bot-app'
-          slot-name: 'Production'
+          package: .
           
