@@ -64,8 +64,14 @@ jobs:
               print('✓ config.py imports successfully')
           except Exception as e:
               print(f'⚠ config.py import issue: {e}')
+          
+          try:
+              from app import create_app
+              print('✓ Flask app factory imports successfully')
+          except Exception as e:
+              print(f'⚠ Flask app import issue: {e}')
           "
-        continue-on-error: true
+          continue-on-error: true
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -79,3 +85,24 @@ jobs:
         with:
           app-name: 'pm-bot-app'
           package: .
+      
+      - name: Initialize Database on Azure
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 60
+          
+          echo "Initializing database..."
+          curl -X GET "https://pm-bot-app-amaycnbqgfgmhqgb.eastasia-01.azurewebsites.net/init-db" \
+            -H "Accept: application/json" \
+            -w "HTTP Status: %{http_code}\n" \
+            --max-time 30 \
+            --retry 3 \
+            --retry-delay 10 || echo "Database initialization may have failed - check manually"
+          
+          echo "Creating sample data..."
+          curl -X GET "https://pm-bot-app-amaycnbqgfgmhqgb.eastasia-01.azurewebsites.net/create-sample-data" \
+            -H "Accept: application/json" \
+            -w "HTTP Status: %{http_code}\n" \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 10 || echo "Sample data creation may have failed - check manually"
