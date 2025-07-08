@@ -7,9 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
+      id-token: write
       contents: read
     steps:
       - uses: actions/checkout@v4
@@ -19,121 +20,48 @@ jobs:
         with:
           python-version: '3.12'
       
+      - name: Check repository structure
+        run: |
+          echo "=== Repository root contents ==="
+          ls -la
+          echo "=== Looking for pm-bot-api folder ==="
+          find . -name "requirements.txt" -type f
+          echo "=== Full directory structure ==="
+          find . -type d -name "pm-bot-api"
+      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r pm-bot-api/requirements.txt
-      
-      - name: Validate application structure
-        run: |
-          echo "=== Application Structure ==="
-          ls -la pm-bot-api/
-          
-          echo "=== Checking required files ==="
-          for file in wsgi.py app.py config.py requirements.txt; do
-            if [ -f "pm-bot-api/$file" ]; then
-              echo "✓ $file found"
-            else
-              echo "✗ $file missing"
-              exit 1
-            fi
-          done
-      
-      - name: Test application imports
-        run: |
-          cd pm-bot-api
-          echo "Testing application imports..."
-          python -c "
-          import sys
-          import os
-          
-          try:
-              print('Testing app.py import...')
-              import app
-              print('✓ app.py imports successfully')
-              
-              print('Testing wsgi.py import...')
-              import wsgi
-              print('✓ wsgi.py imports successfully')
-              
-              print('Testing config import...')
-              from config import config
-              print('✓ config import successful')
-              
-              print('Testing Flask app instance...')
-              from app import app as flask_app
-              print('✓ Flask app instance accessible')
-              
-              print('All imports successful!')
-              
-          except Exception as e:
-              print(f'✗ Import error: {e}')
-              import traceback
-              traceback.print_exc()
-              sys.exit(1)
-          "
-      
-      - name: Run environment check (if available)
-        run: |
-          cd pm-bot-api
-          if [ -f "check_env_vars.py" ]; then
-            echo "Running environment variable check..."
-            python check_env_vars.py || echo "Environment check completed (may have warnings)"
+          # Find the correct path to requirements.txt
+          if [ -f "pm-bot-api/requirements.txt" ]; then
+            echo "Installing from pm-bot-api/requirements.txt"
+            pip install -r pm-bot-api/requirements.txt
+          elif [ -f "requirements.txt" ]; then
+            echo "Installing from requirements.txt"
+            pip install -r requirements.txt
+          else
+            echo "ERROR: requirements.txt not found"
+            exit 1
           fi
-        continue-on-error: true
       
-      - name: Create deployment package
+      - name: Verify files exist
         run: |
-          mkdir -p deployment
-          # Copy all files from pm-bot-api to deployment
-          cp -r pm-bot-api/* deployment/
+          echo "=== Repository structure ==="
+          ls -la
           
-          # Remove unnecessary files for production
-          rm -f deployment/test_*.py
-          rm -f deployment/check_env_vars.py
-          rm -f deployment/docker-compose.yml
-          rm -f deployment/Dockerfile
-          rm -f deployment/.gitignore
+          echo "=== Looking for application files ==="
+          find . -name "wsgi.py" -type f
+          find . -name "requirements.txt" -type f
           
-          echo "=== Deployment Package Contents ==="
-          ls -la deployment/
-          
-          echo "=== Python files in deployment ==="
-          find deployment/ -name "*.py" | sort
-      
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app
-          path: deployment/
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app
-          path: ./deployment
-      
-      - name: Verify deployment package
-        run: |
-          echo "=== Final Deployment Package ==="
-          ls -la deployment/
-          
-          echo "=== Verifying key files ==="
-          for file in wsgi.py app.py config.py; do
-            if [ -f "deployment/$file" ]; then
-              echo "✓ $file present in deployment"
-            else
-              echo "✗ $file missing from deployment"
-              exit 1
-            fi
-          done
+          # Check if files exist in expected location
+          if [ -f "pm-bot-api/wsgi.py" ]; then
+            echo "✓ pm-bot-api/wsgi.py found"
+          elif [ -f "wsgi.py" ]; then
+            echo "✓ wsgi.py found in root"
+          else
+            echo "✗ wsgi.py not found"
+            exit 1
+          fi
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -146,4 +74,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'pm-bot-app'
-          package: ./deployment
+          package: pm-bot-api
