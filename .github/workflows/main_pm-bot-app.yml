@@ -20,48 +20,52 @@ jobs:
         with:
           python-version: '3.12'
       
-      - name: Check repository structure
+      - name: Verify application files
         run: |
-          echo "=== Repository root contents ==="
+          echo "=== Application Files Check ==="
           ls -la
-          echo "=== Looking for pm-bot-api folder ==="
-          find . -name "requirements.txt" -type f
-          echo "=== Full directory structure ==="
-          find . -type d -name "pm-bot-api"
+          
+          echo "=== Verifying required files ==="
+          for file in wsgi.py app.py requirements.txt config.py; do
+            if [ -f "$file" ]; then
+              echo "✓ $file found"
+            else
+              echo "✗ $file missing"
+              exit 1
+            fi
+          done
+          
+          echo "=== Flask app folder check ==="
+          if [ -d "app" ]; then
+            echo "✓ app/ folder found"
+            ls -la app/
+          else
+            echo "✗ app/ folder missing"
+            exit 1
+          fi
       
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # Find the correct path to requirements.txt
-          if [ -f "pm-bot-api/requirements.txt" ]; then
-            echo "Installing from pm-bot-api/requirements.txt"
-            pip install -r pm-bot-api/requirements.txt
-          elif [ -f "requirements.txt" ]; then
-            echo "Installing from requirements.txt"
-            pip install -r requirements.txt
-          else
-            echo "ERROR: requirements.txt not found"
-            exit 1
-          fi
+          pip install -r requirements.txt
       
-      - name: Verify files exist
+      - name: Test basic imports (optional)
         run: |
-          echo "=== Repository structure ==="
-          ls -la
+          echo "Testing basic Python syntax..."
+          python -c "
+          try:
+              import wsgi
+              print('✓ wsgi.py syntax is valid')
+          except Exception as e:
+              print(f'⚠ wsgi.py import issue: {e}')
           
-          echo "=== Looking for application files ==="
-          find . -name "wsgi.py" -type f
-          find . -name "requirements.txt" -type f
-          
-          # Check if files exist in expected location
-          if [ -f "pm-bot-api/wsgi.py" ]; then
-            echo "✓ pm-bot-api/wsgi.py found"
-          elif [ -f "wsgi.py" ]; then
-            echo "✓ wsgi.py found in root"
-          else
-            echo "✗ wsgi.py not found"
-            exit 1
-          fi
+          try:
+              from config import config
+              print('✓ config.py imports successfully')
+          except Exception as e:
+              print(f'⚠ config.py import issue: {e}')
+          "
+        continue-on-error: true
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -74,4 +78,4 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'pm-bot-app'
-          package: pm-bot-api
+          package: .
