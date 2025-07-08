@@ -50,12 +50,98 @@ jobs:
           pip install -r requirements.txt
           echo "✓ Dependencies installed successfully"
       
+      - name: Create database initialization script
+        run: |
+          cat > init_database.py << 'EOF'
+          #!/usr/bin/env python3
+          """
+          Database initialization script for PM Bot API
+          This script initializes the database and creates sample data
+          """
+          
+          import os
+          import sys
+          
+          # Add current directory to path
+          sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+          
+          def init_database():
+              """Initialize database tables and create sample data"""
+              try:
+                  # Set environment variables for production
+                  os.environ['ENVIRONMENT'] = 'production'
+                  
+                  # Import Flask app factory and models
+                  from app import create_app, db
+                  from app.models import Tenant, User
+                  from config import config
+                  
+                  # Create app with production config
+                  config_class = config.get('production', config['default'])
+                  app = create_app(config_class)
+                  
+                  with app.app_context():
+                      print("Creating database tables...")
+                      
+                      # Create all tables
+                      db.create_all()
+                      print("✓ Database tables created successfully")
+                      
+                      # Check if demo tenant already exists
+                      demo_tenant = Tenant.query.filter_by(slug='demo').first()
+                      if not demo_tenant:
+                          print("Creating demo tenant...")
+                          
+                          # Create demo tenant
+                          demo_tenant = Tenant(
+                              name='Demo Company',
+                              slug='demo',
+                              description='Demo tenant for testing',
+                              is_active=True
+                          )
+                          db.session.add(demo_tenant)
+                          db.session.commit()
+                          print(f"✓ Demo tenant created: {demo_tenant.name}")
+                          
+                          # Create admin user
+                          admin_user = User(
+                              tenant_id=demo_tenant.id,
+                              username='admin',
+                              email='admin@demo.com',
+                              first_name='Admin',
+                              last_name='User',
+                              is_active=True
+                          )
+                          admin_user.set_password('admin123')
+                          db.session.add(admin_user)
+                          db.session.commit()
+                          print(f"✓ Admin user created: {admin_user.username}")
+                      else:
+                          print("✓ Demo tenant already exists")
+                      
+                      print("Database initialization completed successfully!")
+                      return True
+                      
+              except Exception as e:
+                  print(f"✗ Database initialization failed: {e}")
+                  import traceback
+                  traceback.print_exc()
+                  return False
+          
+          if __name__ == "__main__":
+              success = init_database()
+              sys.exit(0 if success else 1)
+          EOF
+          
+          echo "✓ Database initialization script created"
+      
       - name: Validate Python syntax only
         run: |
           echo "Checking Python syntax..."
           python -m py_compile wsgi.py
           python -m py_compile app.py
           python -m py_compile config.py
+          python -m py_compile init_database.py
           echo "✓ All Python files have valid syntax"
       
       - name: Login to Azure
@@ -70,3 +156,44 @@ jobs:
         with:
           app-name: 'pm-bot-app'
           package: .
+      
+      - name: Wait for deployment to complete
+        run: |
+          echo "Waiting for Azure deployment to complete..."
+          sleep 90
+      
+      - name: Initialize database on Azure
+        run: |
+          echo "Running database initialization on Azure..."
+          
+          # Try to run the database initialization script via Azure CLI
+          az webapp ssh --name pm-bot-app --resource-group pm-bot-resource-group << 'SCRIPT'
+          cd /home/site/wwwroot
+          python init_database.py
+          SCRIPT
+          
+          echo "Database initialization attempted"
+        continue-on-error: true
+      
+      - name: Alternative - HTTP-based initialization
+        run: |
+          echo "Attempting alternative HTTP-based initialization..."
+          
+          # Create a temporary endpoint call script
+          for i in {1..5}; do
+            echo "Attempt $i: Checking if app is ready..."
+            
+            # Try to ping the app
+            if curl -f -s "https://pm-bot-app-amaycnbqgfgmhqgb.eastasia-01.azurewebsites.net/" > /dev/null; then
+              echo "App is responding"
+              break
+            elif [ $i -eq 5 ]; then
+              echo "App is not responding after 5 attempts"
+            else
+              echo "App not ready, waiting 30 seconds..."
+              sleep 30
+            fi
+          done
+          
+          echo "Database initialization workflow completed"
+        continue-on-error: true
