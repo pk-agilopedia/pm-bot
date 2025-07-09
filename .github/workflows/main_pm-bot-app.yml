@@ -9,276 +9,57 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     permissions:
       id-token: write
       contents: read
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      
-      - name: Verify application files
-        run: |
-          echo "=== Application Files Check ==="
-          ls -la
-          
-          echo "=== Verifying required files ==="
-          for file in wsgi.py app.py requirements.txt config.py; do
-            if [ -f "$file" ]; then
-              echo "✓ $file found"
-            else
-              echo "✗ $file missing"
-              exit 1
-            fi
-          done
-          
-          echo "=== Flask app folder check ==="
-          if [ -d "app" ]; then
-            echo "✓ app/ folder found"
-            ls -la app/
-          else
-            echo "✗ app/ folder missing"
-            exit 1
-          fi
-      
-      - name: Install dependencies
+
+      - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          echo "✓ Dependencies installed successfully"
-      
-      - name: Create database initialization script
-        run: |
-          cat > init_database.py << 'EOF'
-          #!/usr/bin/env python3
-          """
-          Database initialization script for PM Bot API
-          This script initializes the database and creates sample data
-          """
-          
-          import os
-          import sys
-          
-          # Add current directory to path
-          sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-          
-          def init_database():
-              """Initialize database tables and create sample data"""
-              try:
-                  # Set environment variables for production
-                  os.environ['ENVIRONMENT'] = 'production'
-                  
-                  print("Starting database initialization...")
-                  print(f"Current working directory: {os.getcwd()}")
-                  print(f"Python path: {sys.path[:3]}")
-                  
-                  # Import Flask app factory and models
-                  from app import create_app, db
-                  from app.models import Tenant, User
-                  from config import config
-                  
-                  # Create app with production config
-                  config_class = config.get('production', config['default'])
-                  app = create_app(config_class)
-                  
-                  with app.app_context():
-                      print("Creating database tables...")
-                      
-                      # Create all tables
-                      db.create_all()
-                      print("✓ Database tables created successfully")
-                      
-                      # Check if demo tenant already exists
-                      demo_tenant = Tenant.query.filter_by(slug='demo').first()
-                      if not demo_tenant:
-                          print("Creating demo tenant...")
-                          
-                          # Create demo tenant
-                          demo_tenant = Tenant(
-                              name='Demo Company',
-                              slug='demo',
-                              description='Demo tenant for testing',
-                              is_active=True
-                          )
-                          db.session.add(demo_tenant)
-                          db.session.commit()
-                          print(f"✓ Demo tenant created: {demo_tenant.name}")
-                          
-                          # Create admin user
-                          admin_user = User(
-                              tenant_id=demo_tenant.id,
-                              username='admin',
-                              email='admin@demo.com',
-                              first_name='Admin',
-                              last_name='User',
-                              is_active=True
-                          )
-                          admin_user.set_password('admin123')
-                          db.session.add(admin_user)
-                          db.session.commit()
-                          print(f"✓ Admin user created: {admin_user.username}")
-                      else:
-                          print("✓ Demo tenant already exists")
-                      
-                      print("Database initialization completed successfully!")
-                      return True
-                      
-              except Exception as e:
-                  print(f"✗ Database initialization failed: {e}")
-                  import traceback
-                  traceback.print_exc()
-                  return False
-          
-          if __name__ == "__main__":
-              success = init_database()
-              sys.exit(0 if success else 1)
-          EOF
-          
-          echo "✓ Database initialization script created"
-      
-      - name: Create post-deployment script
-        run: |
-          cat > post_deploy.sh << 'EOF'
-          #!/bin/bash
-          echo "=== Post-deployment script starting ==="
-          echo "Current location: $(pwd)"
-          echo "Files in current directory:"
-          ls -la
-          
-          # Find where the application files are located
-          echo "=== Searching for application files ==="
-          TEMP_DIR=$(find /tmp -name "app.py" -type f 2>/dev/null | head -1 | xargs dirname)
-          if [ -n "$TEMP_DIR" ]; then
-              echo "Found application files in: $TEMP_DIR"
-              echo "Files in temp directory:"
-              ls -la "$TEMP_DIR"
-              
-              echo "=== Copying files to wwwroot ==="
-              cp -r "$TEMP_DIR"/* /home/site/wwwroot/
-              
-              echo "=== Files in wwwroot after copy ==="
-              ls -la /home/site/wwwroot/
-              
-              echo "=== Running database initialization ==="
-              cd /home/site/wwwroot
-              python init_database.py
-              
-              echo "=== Database initialization completed ==="
-          else
-              echo "Application files not found in expected temp location"
-              echo "Checking wwwroot directly:"
-              ls -la /home/site/wwwroot/
-              
-              if [ -f "/home/site/wwwroot/init_database.py" ]; then
-                  echo "=== Running database initialization from wwwroot ==="
-                  cd /home/site/wwwroot
-                  python init_database.py
-              fi
-          fi
-          
-          echo "=== Post-deployment script completed ==="
-          EOF
-          
-          chmod +x post_deploy.sh
-          echo "✓ Post-deployment script created"
-      
-      - name: Validate Python syntax
-        run: |
-          echo "Checking Python syntax..."
-          python -m py_compile wsgi.py
-          python -m py_compile app.py
-          python -m py_compile config.py
-          python -m py_compile init_database.py
-          echo "✓ All Python files have valid syntax"
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_CA47F2A525364A2EBACCC6660D3F856E }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_86330DC39FE64A1A8D44A6A55F30E5A4 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_2194892073364D0D929143F931B93D00 }}
-      
+
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'pm-bot-app'
           package: .
-      
-      - name: Wait for deployment to stabilize
+          startup-command: gunicorn wsgi:app --bind=0.0.0.0:$PORT --timeout 600
+
+      - name: Initialize database
         run: |
-          echo "Waiting for Azure deployment to complete and stabilize..."
-          sleep 120
-      
-      - name: Run post-deployment script
-        run: |
-          echo "=== Running post-deployment configuration ==="
-          
-          # Upload and execute the post-deployment script
-          az webapp deploy --resource-group $(az webapp show --name pm-bot-app --query resourceGroup -o tsv) \
-            --name pm-bot-app \
-            --src-path post_deploy.sh \
-            --type startup \
-            --timeout 300 || echo "Direct script execution failed, trying alternative method"
-          
-          echo "Post-deployment script execution attempted"
-        continue-on-error: true
-      
-      - name: Alternative - Execute via SSH
-        run: |
-          echo "=== Attempting alternative post-deployment via SSH ==="
-          
-          # Try to execute commands via Azure CLI
-          az webapp ssh --resource-group $(az webapp show --name pm-bot-app --query resourceGroup -o tsv) \
-            --name pm-bot-app << 'SCRIPT' || echo "SSH execution failed"
-          
-          echo "=== SSH Session Started ==="
-          cd /home/site/wwwroot
-          ls -la
-          
-          # Check if files are in temp location and copy if needed
-          TEMP_DIR=$(find /tmp -name "app.py" -type f 2>/dev/null | head -1 | xargs dirname)
-          if [ -n "$TEMP_DIR" ] && [ "$TEMP_DIR" != "/home/site/wwwroot" ]; then
-              echo "Copying files from $TEMP_DIR to /home/site/wwwroot"
-              cp -r "$TEMP_DIR"/* /home/site/wwwroot/
-          fi
-          
-          # Run database initialization if script exists
-          if [ -f "init_database.py" ]; then
-              echo "Running database initialization..."
-              python init_database.py
-          else
-              echo "init_database.py not found"
-          fi
-          
-          echo "=== SSH Session Completed ==="
-          SCRIPT
-          
-          echo "Alternative execution completed"
-        continue-on-error: true
-      
+          python init_db.py
+
       - name: Verify deployment
         run: |
           echo "=== Verifying deployment ==="
-          
-          # Test if the app is responding
-          for i in {1..6}; do
+          for i in {1..5}; do
             echo "Attempt $i: Testing app response..."
-            
             if curl -f -s "https://pm-bot-app-amaycnbqgfgmhqgb.eastasia-01.azurewebsites.net/" >/dev/null 2>&1; then
-              echo "✓ App is responding (even if 404, Flask is running)"
+              echo "✓ App is responding"
               break
-            elif curl -s "https://pm-bot-app-amaycnbqgfgmhqgb.eastasia-01.azurewebsites.net/" | grep -q "Internal Server Error\|Application Error"; then
-              echo "⚠ App is responding but with errors"
-              break
-            elif [ $i -eq 6 ]; then
-              echo "✗ App is not responding after 6 attempts"
+            elif [ $i -eq 5 ]; then
+              echo "✗ App is not responding after several attempts"
+              exit 1
             else
-              echo "App not ready, waiting 30 seconds..."
+              echo "App not ready yet. Waiting 30 seconds..."
               sleep 30
             fi
           done
-          
-          echo "=== Deployment verification completed ==="
+          echo "Deployment verification completed."
