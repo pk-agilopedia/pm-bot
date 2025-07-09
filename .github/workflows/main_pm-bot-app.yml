@@ -23,10 +23,39 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Verify required files
+        run: |
+          echo "=== Checking for required files ==="
+          for file in wsgi.py app.py requirements.txt config.py; do
+            if [ -f "$file" ]; then
+              echo "✓ $file found"
+            else
+              echo "✗ $file missing"
+              exit 1
+            fi
+          done
+
+          echo "=== Checking app/ folder ==="
+          if [ -d "app" ]; then
+            echo "✓ app/ folder found"
+            ls -la app/
+          else
+            echo "✗ app/ folder missing"
+            exit 1
+          fi
+
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Validate Python syntax
+        run: |
+          echo "Checking Python syntax..."
+          python -m py_compile wsgi.py
+          python -m py_compile app.py
+          python -m py_compile config.py
+          echo "✓ Syntax check passed"
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -41,10 +70,6 @@ jobs:
           app-name: 'pm-bot-app'
           package: .
           startup-command: gunicorn wsgi:app --bind=0.0.0.0:$PORT --timeout 600
-
-      - name: Initialize database
-        run: |
-          python init_db.py
 
       - name: Verify deployment
         run: |
@@ -63,3 +88,17 @@ jobs:
             fi
           done
           echo "Deployment verification completed."
+
+      - name: Print DB init instructions
+        run: |
+          echo ""
+          echo "⚠ Database initialization NOT run in GitHub Actions."
+          echo "To initialize your DB after deploy:"
+          echo ""
+          echo "1. Go to Azure Portal → Your Web App → SSH Console"
+          echo "2. Run these commands:"
+          echo ""
+          echo "   cd /home/site/wwwroot"
+          echo "   python init_db.py"
+          echo ""
+          echo "✅ Done! Your DB will be initialized with sample data."
