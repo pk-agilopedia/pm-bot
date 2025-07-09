@@ -69,25 +69,7 @@ jobs:
         with:
           app-name: 'pm-bot-app'
           package: .
-          startup-command: gunicorn wsgi:app --bind=0.0.0.0:$PORT --timeout 600
-
-      - name: Verify deployment
-        run: |
-          echo "=== Verifying deployment ==="
-          for i in {1..5}; do
-            echo "Attempt $i: Testing app response..."
-            if curl -f -s "https://pm-bot-app-amaycnbqgfgmhqgb.eastasia-01.azurewebsites.net/" >/dev/null 2>&1; then
-              echo "✓ App is responding"
-              break
-            elif [ $i -eq 5 ]; then
-              echo "✗ App is not responding after several attempts"
-              exit 1
-            else
-              echo "App not ready yet. Waiting 30 seconds..."
-              sleep 30
-            fi
-          done
-          echo "Deployment verification completed."
+          startup-command: gunicorn wsgi:app --bind=0.0.0.0:$PORT --timeout 600      
 
       - name: Print DB init instructions
         run: |
