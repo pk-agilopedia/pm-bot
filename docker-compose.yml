@@ -57,8 +57,8 @@ services:
     image: nginx:alpine
     container_name: pm-bot-nginx
     ports:
-      - "80:80"
-      - "443:443"
+      - "8081:80"
+      - "8444:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - ./nginx/ssl:/etc/nginx/ssl
