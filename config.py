@@ -8,12 +8,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-for-dev'
     
     # Database
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        f"mysql+pymysql://{os.environ.get('DB_USER', 'root')}:" \
-        f"{os.environ.get('DB_PASSWORD', 'password')}@" \
-        f"{os.environ.get('DB_HOST', 'localhost')}:" \
-        f"{os.environ.get('DB_PORT', '3306')}/" \
-        f"{os.environ.get('DB_NAME', 'pmbot')}"
+    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://pmbot:pmbot123@db:3306/pmbot'
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
