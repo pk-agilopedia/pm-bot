@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  pmbot-api:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=True
+      - DATABASE_URL=mysql+pymysql://pmbot:pmbot123@db:3306/pmbot
+    depends_on:
+      - db
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - pmbot-network
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: pmbot
+      MYSQL_USER: pmbot
+      MYSQL_PASSWORD: pmbot123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - pmbot-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - pmbot-api
+    networks:
+      - pmbot-network
+
+volumes:
+  mysql_data:
+
+networks:
+  pmbot-network:
+    driver: bridge 
