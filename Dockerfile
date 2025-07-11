@@ -48,5 +48,5 @@
         CMD curl -f http://localhost:5000/api/v1/health || exit 1
     
     # Start the application
-    CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "app:app"]
+    CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "--timeout", "120", "wsgi:app"]
     
