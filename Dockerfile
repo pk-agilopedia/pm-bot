@@ -31,13 +31,12 @@
     # Copy application code
     COPY . .
     
-    # Create logs directory
-    RUN mkdir -p logs
-    
-    # Create non-root user
-    RUN useradd --create-home --shell /bin/bash app \
-        && chown -R app:app /app
-    
+   # Create logs directory and fix permissions
+    RUN mkdir -p logs \
+    && useradd --create-home --shell /bin/bash app \
+    && chown -R app:app /app \
+    && chmod -R 755 /app/logs
+
     USER app
     
     # Expose the application port
