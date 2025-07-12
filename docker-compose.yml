@@ -4,9 +4,8 @@ services:
   pmbot-api:
     build: .
     container_name: pm-bot-api
-    # REMOVE host port mapping for security
-    # ports:
-    #   - "5000:5000"
+    ports:
+      - "5000:5000"    # Uncomment for EC2 Nginx to connect to your container
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
       - DEBUG=${DEBUG}
@@ -50,20 +49,6 @@ services:
       - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    networks:
-      - pmbot-network
-
-  nginx:
-    image: nginx:alpine
-    container_name: pm-bot-nginx
-    ports:
-      - "8081:80"
-      - "8444:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-    depends_on:
-      - pmbot-api
     networks:
       - pmbot-network
 
