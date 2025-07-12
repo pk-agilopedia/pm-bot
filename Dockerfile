@@ -31,11 +31,11 @@
     # Copy application code
     COPY . .
     
-   # Create logs directory and fix permissions
-    RUN mkdir -p logs \
-    && useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app \
-    && chmod -R 755 /app/logs
+    # Create app user and logs directory, set permissions
+    RUN useradd --create-home --shell /bin/bash app \
+        && mkdir -p /app/logs \
+        && chown -R app:app /app \
+        && chmod -R 755 /app/logs
 
     USER app
     
