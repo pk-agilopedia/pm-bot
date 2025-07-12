@@ -83,5 +83,6 @@ def create_sample_data():
     print(f'User: {user.username} / password123')
     print(f'Project: {project.name} ({project.key})')
 
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000) 
