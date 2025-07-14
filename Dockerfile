@@ -30,6 +30,8 @@
     
     # Copy application code
     COPY . .
+ 
+    RUN chmod +x /app/entrypoint.sh
     
     # Create app user and logs directory, set permissions
     RUN useradd --create-home --shell /bin/bash app \
@@ -44,11 +46,7 @@
     
     # Health check
     HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-        CMD curl -f http://localhost:5000/api/v1/health || exit 1
-
-    # Copy entrypoint script
-    COPY entrypoint.sh /app/entrypoint.sh
-    RUN chmod +x /app/entrypoint.sh
+        CMD curl -f http://localhost:5000/api/v1/health || exit 1   
 
     ENTRYPOINT ["/app/entrypoint.sh"]
     
