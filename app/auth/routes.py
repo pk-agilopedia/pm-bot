@@ -63,7 +63,7 @@ def register():
         
         # Generate access token
         access_token = create_access_token(
-            identity=user.id,
+            identity=str(user.id),
             expires_delta=timedelta(hours=current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 24))
         )
         
@@ -118,9 +118,9 @@ def login():
         
         # Generate access token
         access_token = create_access_token(
-            identity=user.id,
+            identity=str(user.id),
             expires_delta=timedelta(hours=current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 24))
-        )
+        )       
         
         return jsonify({
             'message': 'Login successful',
@@ -203,7 +203,7 @@ def refresh_token():
         
         # Generate new access token
         access_token = create_access_token(
-            identity=user.id,
+            identity=str(user.id),
             expires_delta=timedelta(hours=current_app.config.get('JWT_ACCESS_TOKEN_EXPIRES', 24))
         )
         
