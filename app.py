@@ -5,7 +5,7 @@ Main application entry point
 """
 
 import os
-from app import create_app, db
+from app import create_app, db, register_cli_commands
 from app.models import *
 from flask_migrate import Migrate
 from config import config
@@ -16,6 +16,10 @@ config_class = config.get(env, config['default'])
 
 # Create Flask app
 app = create_app(config_class)
+
+# Register CLI commands after app creation
+register_cli_commands(app)
+
 migrate = Migrate(app, db)
 
 if __name__ == '__main__':
