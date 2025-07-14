@@ -20,30 +20,14 @@ done
 echo "✅ Database is ready!"
 
 # Set environment variables
-export FLASK_APP=app.py
 export PYTHONPATH=/app:$PYTHONPATH
 
-# Run database initialization with retry logic
+# Run database initialization using your existing init_db.py file
 echo "🔄 Initializing database..."
-max_retries=3
-retry_count=0
+python /app/init_db.py
 
-while [ $retry_count -lt $max_retries ]; do
-    if python -m flask init_db; then
-        echo "✅ Database initialization complete!"
-        break
-    else
-        retry_count=$((retry_count + 1))
-        if [ $retry_count -lt $max_retries ]; then
-            echo "⚠️  Database initialization failed, retrying in 5 seconds... (attempt $retry_count/$max_retries)"
-            sleep 5
-        else
-            echo "❌ Database initialization failed after $max_retries attempts"
-            exit 1
-        fi
-    fi
-done
+echo "✅ Database initialization complete!"
 
-# Now start Gunicorn
+# Now start Gunicorn (your wsgi.py already exists)
 echo "🚀 Starting Gunicorn server..."
 exec gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 --access-logfile - --error-logfile - wsgi:app
