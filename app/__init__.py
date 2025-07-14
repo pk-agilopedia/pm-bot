@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from config import Config
+from config import config
 import logging
 from logging.handlers import RotatingFileHandler
 import os
@@ -12,8 +12,13 @@ db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 
-def create_app(config_class=Config):
+def create_app(config_class=None):
     app = Flask(__name__)
+    # Determine which config to use
+    if config_class is None:
+        env = os.environ.get('ENVIRONMENT', 'development')
+        config_class = config[env]
+    
     app.config.from_object(config_class)
 
     # Log the JIRA_SERVER_URL to verify it's loaded correctly
