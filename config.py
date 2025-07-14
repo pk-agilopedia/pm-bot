@@ -5,10 +5,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-for-dev'
-    
-    # Database
-    SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://pmbot:pmbot123@db:3306/pmbot'
+    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your-secret-key-for-dev'   
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
