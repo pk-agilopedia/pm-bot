@@ -49,6 +49,77 @@ def create_app(config_class=None):
         app.logger.setLevel(logging.INFO)
         app.logger.info('PM Bot startup')
 
+    # Add CLI commands
+    @app.cli.command()
+    def init_db():
+        """Initialize the database with tables"""
+        db.create_all()
+        print('✅ Database initialized!')
+
+    @app.cli.command()
+    def create_sample_data():
+        """Create sample data for development"""
+        from app.models import User, Tenant, Project
+        
+        # Create sample tenant
+        tenant = Tenant(
+            name='Demo Company',
+            slug='demo',
+            description='Demo tenant for testing'
+        )
+        db.session.add(tenant)
+        db.session.commit()
+        
+        # Create sample user
+        user = User(
+            tenant_id=tenant.id,
+            username='admin',
+            email='admin@demo.com',
+            first_name='Admin',
+            last_name='User'
+        )
+        user.set_password('password123')
+        db.session.add(user)
+        db.session.commit()
+        
+        # Create sample project
+        project = Project(
+            tenant_id=tenant.id,
+            name='Sample Project',
+            key='SAMPLE',
+            description='A sample project for testing',
+            manager_id=user.id
+        )
+        db.session.add(project)
+        db.session.commit()
+        
+        print('✅ Sample data created!')
+        print(f'Tenant: {tenant.name} (slug: {tenant.slug})')
+        print(f'User: {user.username} / password123')
+        print(f'Project: {project.name} ({project.key})')
+
+    @app.shell_context_processor
+    def make_shell_context():
+        """Shell context for flask shell"""
+        from app.models import (User, Tenant, Project, Tool, ProjectTool, 
+                               ChatSession, ChatMessage, TokenUsage, APIUsage, 
+                               AgentExecution, SystemConfig, ModelPricing)
+        return {
+            'db': db, 
+            'User': User, 
+            'Tenant': Tenant,
+            'Project': Project,
+            'Tool': Tool,
+            'ProjectTool': ProjectTool,
+            'ChatSession': ChatSession,
+            'ChatMessage': ChatMessage,
+            'TokenUsage': TokenUsage,
+            'APIUsage': APIUsage,
+            'AgentExecution': AgentExecution,
+            'SystemConfig': SystemConfig,
+            'ModelPricing': ModelPricing
+        }
+
     # Register AI Agents
     with app.app_context():
         _register_agents()
@@ -63,4 +134,4 @@ def _register_agents():
     # Register only the main agent - it handles routing to specialized agents
     agent_registry.register_agent(MainAgent())
 
-from app import models 
+from app import models
