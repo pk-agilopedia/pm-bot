@@ -18,6 +18,7 @@
             default-libmysqlclient-dev \
             pkg-config \
             curl \
+            netcat-openbsd \
         && rm -rf /var/lib/apt/lists/*
     
     # Copy requirements first to leverage Docker cache
