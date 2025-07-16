@@ -1,6 +1,7 @@
 import os
 import uuid
 import time
+import pprint
 from datetime import datetime
 from flask import request, jsonify, current_app, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
@@ -184,6 +185,12 @@ async def handle_teams_message():
     This route is async because BotFramework SDK is async.
     """
     try:
+
+        # Print the raw payload
+        print("========== Incoming request from Teams ==========")
+        pprint.pprint(request.json)
+        print("=================================================")
+        
         # Deserialize incoming Activity
         activity = Activity().deserialize(request.json)
 
