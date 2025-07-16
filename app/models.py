@@ -64,6 +64,7 @@ class User(BaseModel):
     role = db.Column(db.Enum(UserRole), default=UserRole.VIEWER)
     is_active = db.Column(db.Boolean, default=True)
     last_login = db.Column(db.DateTime)
+    teams_user_id = db.Column(db.String(200), unique=True, nullable=True)
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
