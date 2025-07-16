@@ -30,11 +30,4 @@ echo "✅ Database initialization complete!"
 
 # Now start Gunicorn (your wsgi.py already exists)
 echo "🚀 Starting Gunicorn server..."
-exec gunicorn \
-    -k uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:5000 \
-    --workers 4 \
-    --timeout 120 \
-    --access-logfile - \
-    --error-logfile - \
-    wsgi:app
+exec uvicorn wsgi:app --host 0.0.0.0 --port 5000 --workers 4 --proxy-headers --log-level info
