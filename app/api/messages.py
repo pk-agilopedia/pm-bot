@@ -182,34 +182,28 @@ def handle_message():
 async def handle_teams_message():
     """
     Endpoint for handling messages from Microsoft Teams.
-    This route is async because BotFramework SDK is async.
+    Temporarily bypasses user authentication for testing purposes.
     """
     try:
-
         # Print the raw payload
         print("========== Incoming request from Teams ==========")
         pprint.pprint(request.json)
         print("=================================================")
-        
+
         # Deserialize incoming Activity
         activity = Activity().deserialize(request.json)
 
         # Extract message text
         message_text = activity.text
 
-        # Map Teams user ID → internal user
-        teams_user_id = activity.from_property.id
-        user = User.query.filter_by(teams_user_id=teams_user_id).first()
-
-        if not user:
-            # Optionally create a guest user
-            # For now, return error
-            return jsonify({'error': 'User not linked to Teams account'}), 403
+        # TEMP: Use default/fixed user ID for testing without auth
+        # You can later plug in logic to fetch or validate Teams user
+        default_user_id = 1  # Replace with a valid user ID in your DB
 
         # Run your shared pipeline
         result = run_agent_pipeline(
             message=message_text,
-            user_id=user.id,
+            user_id=default_user_id,
             interface="teams"
         )
 
@@ -227,6 +221,7 @@ async def handle_teams_message():
     except Exception as e:
         current_app.logger.error(f"Error handling Teams message: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
+
 
 
 # -----------------------------
