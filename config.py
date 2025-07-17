@@ -40,6 +40,8 @@ class Config:
     # Slack and Teams
     SLACK_BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
     TEAMS_WEBHOOK_URL = os.environ.get('TEAMS_WEBHOOK_URL')
+
+
     
     # Application settings
     ENVIRONMENT = os.environ.get('ENVIRONMENT', 'development')
@@ -60,6 +62,9 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    BOT_APP_ID = os.environ.get('BOT_APP_ID')
+    BOT_APP_PASSWORD = os.environ.get('BOT_APP_PASSWORD')
+    
 
 class TestingConfig(Config):
     TESTING = True
