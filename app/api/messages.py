@@ -6,8 +6,10 @@ from datetime import datetime
 from flask import request, jsonify, current_app, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.api import bp
-from app.models import User, Project, ChatSession, ChatMessage, db
+from app.models import User, ChatSession, ChatMessage, db
 from app.agents.base import AgentContext, agent_registry
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 # Import Bot Framework SDK
 from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings, TurnContext
@@ -18,10 +20,32 @@ from botbuilder.schema import Activity
 # -----------------------------
 
 adapter_settings = BotFrameworkAdapterSettings(
-    app_id=os.environ.get("BOT_APP_ID"),
-    app_password=os.environ.get("BOT_APP_PASSWORD")
+    app_id=os.environ.get("BOT_APP_ID", ""),
+    app_password=os.environ.get("BOT_APP_PASSWORD", "")
 )
 adapter = BotFrameworkAdapter(adapter_settings)
+
+# Thread pool for running sync operations in async context
+thread_pool = ThreadPoolExecutor(max_workers=4)
+
+# -----------------------------
+# Async wrapper for agent pipeline
+# -----------------------------
+
+async def run_agent_pipeline_async(message, user_id, project_id=None, session_id=None, interface="teams"):
+    """
+    Async wrapper for the agent pipeline to avoid blocking the async event loop
+    """
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(
+        thread_pool,
+        run_agent_pipeline,
+        message,
+        user_id,
+        project_id,
+        session_id,
+        interface
+    )
 
 # -----------------------------
 # Shared logic for message handling
@@ -175,53 +199,124 @@ def handle_message():
 
 
 # -----------------------------
-# Microsoft Teams endpoint (async)
+# Microsoft Teams endpoint (async) - FIXED VERSION
 # -----------------------------
 
 @bp.route('/teams/messages', methods=['POST'])
 async def handle_teams_message():
     """
     Endpoint for handling messages from Microsoft Teams.
-    Temporarily bypasses user authentication for testing purposes.
+    Properly handles Bot Framework authentication and async processing.
     """
     try:
-        # Print the raw payload
+        # Print the raw payload for debugging
         print("========== Incoming request from Teams ==========")
         pprint.pprint(request.json)
         print("=================================================")
 
+        # Get the authorization header
+        auth_header = request.headers.get('Authorization', '')
+        
         # Deserialize incoming Activity
         activity = Activity().deserialize(request.json)
-
+        
         # Extract message text
-        message_text = activity.text
+        message_text = activity.text if activity.text else ""
+        
+        # Skip empty messages
+        if not message_text.strip():
+            return Response(status=200)
 
         # TEMP: Use default/fixed user ID for testing without auth
         # You can later plug in logic to fetch or validate Teams user
         default_user_id = 1  # Replace with a valid user ID in your DB
 
-        # Run your shared pipeline
-        result = run_agent_pipeline(
-            message=message_text,
-            user_id=default_user_id,
-            interface="teams"
-        )
-
-        # Prepare reply
+        # Define the turn logic function
         async def turn_logic(turn_context: TurnContext):
-            if result.get("error"):
-                await turn_context.send_activity(result.get("error"))
-            else:
-                await turn_context.send_activity(result["data"]["content"])
+            try:
+                # Run agent pipeline asynchronously
+                result = await run_agent_pipeline_async(
+                    message=message_text,
+                    user_id=default_user_id,
+                    interface="teams"
+                )
+                
+                # Send response
+                if result.get("error"):
+                    response_text = f"Sorry, I encountered an error: {result.get('error')}"
+                else:
+                    response_text = result["data"]["content"]
+                
+                await turn_context.send_activity(response_text)
+                
+            except Exception as e:
+                current_app.logger.error(f"Error in turn logic: {str(e)}")
+                await turn_context.send_activity("Sorry, I encountered an error processing your message.")
 
-        await adapter.process_activity(activity, "", turn_logic)
-
+        # Process the activity with proper authentication
+        await adapter.process_activity(activity, auth_header, turn_logic)
+        
         return Response(status=200)
 
     except Exception as e:
         current_app.logger.error(f"Error handling Teams message: {str(e)}")
         return jsonify({'error': 'Internal server error'}), 500
 
+
+# -----------------------------
+# Alternative Teams endpoint without Bot Framework (for testing)
+# -----------------------------
+
+@bp.route('/teams/messages/simple', methods=['POST'])
+def handle_teams_message_simple():
+    """
+    Simplified Teams endpoint that bypasses Bot Framework authentication.
+    Use this for testing purposes only.
+    """
+    try:
+        # Print the raw payload for debugging
+        print("========== Incoming request from Teams (Simple) ==========")
+        pprint.pprint(request.json)
+        print("==========================================================")
+
+        # Parse the request
+        data = request.get_json()
+        
+        # Extract message text from Teams activity
+        message_text = data.get('text', '')
+        
+        # Skip empty messages
+        if not message_text.strip():
+            return jsonify({'type': 'message', 'text': 'Hello! How can I help you?'}), 200
+
+        # TEMP: Use default/fixed user ID for testing
+        default_user_id = 1
+
+        # Run agent pipeline
+        result = run_agent_pipeline(
+            message=message_text,
+            user_id=default_user_id,
+            interface="teams"
+        )
+
+        # Prepare response
+        if result.get("error"):
+            response_text = f"Sorry, I encountered an error: {result.get('error')}"
+        else:
+            response_text = result["data"]["content"]
+
+        # Return response in Teams format
+        return jsonify({
+            'type': 'message',
+            'text': response_text
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error handling Teams message (simple): {str(e)}")
+        return jsonify({
+            'type': 'message',
+            'text': 'Sorry, I encountered an error processing your message.'
+        }), 500
 
 
 # -----------------------------
