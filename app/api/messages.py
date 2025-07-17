@@ -35,17 +35,17 @@ thread_pool = ThreadPoolExecutor(max_workers=4)
 async def run_agent_pipeline_async(message, user_id, project_id=None, session_id=None, interface="teams"):
     """
     Async wrapper for the agent pipeline to avoid blocking the async event loop
+    Preserves Flask application context for database operations
     """
+    # Get the current Flask app context
+    app = current_app._get_current_object()
+    
+    def run_with_context():
+        with app.app_context():
+            return run_agent_pipeline(message, user_id, project_id, session_id, interface)
+    
     loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(
-        thread_pool,
-        run_agent_pipeline,
-        message,
-        user_id,
-        project_id,
-        session_id,
-        interface
-    )
+    return await loop.run_in_executor(thread_pool, run_with_context)
 
 # -----------------------------
 # Shared logic for message handling
@@ -199,14 +199,14 @@ def handle_message():
 
 
 # -----------------------------
-# Microsoft Teams endpoint (async) - FIXED VERSION
+# Microsoft Teams endpoint (async) - FULL TEAMS INTEGRATION
 # -----------------------------
 
 @bp.route('/teams/messages', methods=['POST'])
 async def handle_teams_message():
     """
     Endpoint for handling messages from Microsoft Teams.
-    Properly handles Bot Framework authentication and async processing.
+    Supports full Teams integration with Bot Framework authentication and responses.
     """
     try:
         # Print the raw payload for debugging
@@ -216,6 +216,9 @@ async def handle_teams_message():
 
         # Get the authorization header
         auth_header = request.headers.get('Authorization', '')
+        print(f"Authorization header present: {bool(auth_header)}")
+        if auth_header:
+            print(f"Auth header preview: {auth_header[:50]}...")
         
         # Deserialize incoming Activity
         activity = Activity().deserialize(request.json)
@@ -227,40 +230,65 @@ async def handle_teams_message():
         if not message_text.strip():
             return Response(status=200)
 
+        # Map Teams user to your internal user (implement your logic here)
+        teams_user_id = activity.from_property.id if activity.from_property else None
+        conversation_id = activity.conversation.id if activity.conversation else None
+        
+        print(f"Teams user ID: {teams_user_id}")
+        print(f"Conversation ID: {conversation_id}")
+        
         # TEMP: Use default/fixed user ID for testing without auth
-        # You can later plug in logic to fetch or validate Teams user
+        # TODO: Implement proper user mapping logic based on teams_user_id
         default_user_id = 1  # Replace with a valid user ID in your DB
 
         # Define the turn logic function
         async def turn_logic(turn_context: TurnContext):
             try:
-                # Run agent pipeline asynchronously
+                print(f"Processing message: {message_text}")
+                
+                # Run agent pipeline asynchronously with proper context
                 result = await run_agent_pipeline_async(
                     message=message_text,
                     user_id=default_user_id,
                     interface="teams"
                 )
                 
-                # Send response
+                print(f"Agent pipeline result: {result}")
+                
+                # Prepare response
                 if result.get("error"):
                     response_text = f"Sorry, I encountered an error: {result.get('error')}"
                 else:
                     response_text = result["data"]["content"]
                 
+                print(f"Sending response: {response_text[:100]}...")
+                
+                # Send response back to Teams
                 await turn_context.send_activity(response_text)
                 
             except Exception as e:
-                current_app.logger.error(f"Error in turn logic: {str(e)}")
-                await turn_context.send_activity("Sorry, I encountered an error processing your message.")
+                error_msg = f"Error in turn logic: {str(e)}"
+                current_app.logger.error(error_msg)
+                print(f"Turn logic error: {error_msg}")
+                
+                # Try to send error message to user
+                try:
+                    await turn_context.send_activity("Sorry, I encountered an error processing your message.")
+                except Exception as send_error:
+                    print(f"Failed to send error message: {str(send_error)}")
 
-        # Process the activity with proper authentication
+        # Process the activity with Bot Framework
+        print("Processing activity with Bot Framework adapter...")
         await adapter.process_activity(activity, auth_header, turn_logic)
         
+        print("Successfully processed Teams message")
         return Response(status=200)
 
     except Exception as e:
-        current_app.logger.error(f"Error handling Teams message: {str(e)}")
-        return jsonify({'error': 'Internal server error'}), 500
+        error_msg = f"Error handling Teams message: {str(e)}"
+        current_app.logger.error(error_msg)
+        print(f"Main handler error: {error_msg}")
+        return Response(status=500)
 
 
 # -----------------------------
